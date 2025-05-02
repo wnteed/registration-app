@@ -9,6 +9,7 @@ pipeline {
         RELEASE = "1.0.0"
         IMAGE_NAME = "wanted14/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+        JENKINS_API_TOKEN = credentials('JENKINS_API_TOKEN')
     }
     stages {
         stage("Cleanup Workspace") {
@@ -92,6 +93,19 @@ EOF
                     sh "docker rmi ${IMAGE_NAME}:latest || true"
                 }
             }
+        }
+        stage("Trigger CD Pipeline") {
+            steps {
+                script {
+                    sh """
+                        curl -v -k --user Rayane:${JENKINS_API_TOKEN} -X POST \
+                        -H 'cache-control: no-cache' \
+                        -H 'content-type: application/x-www-form-urlencoded' \
+                        --data 'IMAGE_TAG=${IMAGE_TAG}' \
+                        'http://ec2-51-20-117-188.eu-north-1.compute.amazonaws.com/job/cd/buildWithParameters?token=gitops-token'
+                        """
+                    }
+                }
         }
     }
 }
